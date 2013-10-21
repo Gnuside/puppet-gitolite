@@ -158,7 +158,7 @@ class gitolite (
     mode    => '0640',
     require => User[$gitolite::user],
   }
-  
+
   if $rcfile {
     class { "gitolite::rc":
       umask           => $umask,
@@ -172,11 +172,23 @@ class gitolite (
     }
   }
 
+  file {
+    "${gitolite::homedir}/bin":
+      require     => Vcsrepo[$gitolite::srcdir],
+      owner       => $gitolite::nonrootinstallmethod ? { true => $gitolite::user, default => "root" },
+      group       => $gitolite::nonrootinstallmethod ? { true => $gitolite::user, default => "root" },
+      mode        => '0700',
+      ensure      => directory
+  }
+
   exec {
     "gitolite/install":
-      require     => Vcsrepo[$gitolite::srcdir],
+      require     => [
+        Vcsrepo[$gitolite::srcdir],
+        File["${gitolite::homedir}/bin"]
+      ],
       command     => $gitolite::nonrootinstallmethod ? {
-        true => "${gitolite::srcdir}/install ${gitolite::homedir}/bin",
+        true => "${gitolite::srcdir}/install -to ${gitolite::homedir}/bin",
         default => "${gitolite::srcdir}/install -ln /usr/local/bin",
       },
       cwd         => $gitolite::srcdir,
